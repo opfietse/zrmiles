@@ -24,16 +24,20 @@ scalacOptions := Seq(
   "-Xlog-reflective-calls")
 
 resolvers ++= Seq("Base64 Repo" at "http://dl.bintray.com/content/softprops/maven")
+resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 
 libraryDependencies ++= {
   val akkaVersion = "2.4.1"
   val sprayVersion = "1.3.3"
   Seq(
-    "com.typesafe.akka"         %% "akka-actor"   % akkaVersion,
-    "com.typesafe.akka"         %% "akka-slf4j"   % akkaVersion,
-    "io.spray"         %% "spray-caching"   % sprayVersion,
-    "io.spray"         %% "spray-can"   % sprayVersion,
-    "io.spray"         %% "spray-routing"   % sprayVersion
+    "com.typesafe.akka"         %% "akka-actor"      % akkaVersion,
+    "com.typesafe.akka"         %% "akka-slf4j"      % akkaVersion,
+    "io.spray"                  %% "spray-caching"   % sprayVersion,
+    "io.spray"                  %% "spray-can"       % sprayVersion,
+    "io.spray"                  %% "spray-routing"   % sprayVersion,
+    "joda-time"                  % "joda-time"       % "2.9.2",
+    "ch.qos.logback"             % "logback-classic" % "1.1.4",
+    "com.typesafe.slick"        %% "slick"           % "3.1.1"
   )
 }
 
