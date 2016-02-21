@@ -1,22 +1,36 @@
 package net.opfietse.zrmiles.db
 
+import net.opfietse.zrmiles.model.Rider
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import slick.driver.MySQLDriver.api._
 
 object ZrMilesSchema {
   // Definition of the SUPPLIERS table
-  class Riders(tag: Tag) extends Table[(Int, String, String, Option[String], Option[String], String, Option[String], Int)](tag, "ZR_RIDERS") {
+  //  class Riders(tag: Tag) extends Table[(Int, String, String, Option[String], Option[String], String, Option[String], Int)](tag, "ZR_RIDERS") {
+  //    def id = column[Int]("ID", O.PrimaryKey) // This is the primary key column
+  //    def firstName = column[String]("FIRST_NAME")
+  //    def lastName = column[String]("LAST_NAME")
+  //    def emailAddress = column[Option[String]]("EMAIL_ADDRESS")
+  //    def streetAddress = column[Option[String]]("STREET_ADDRESS")
+  //    def username = column[String]("USER_NAME")
+  //    def password = column[Option[String]]("USER_PASSWORD")
+  //    def role = column[Int]("USER_ROLE")
+  //    // Every table needs a * projection with the same type as the table's type parameter
+  //    def * = (id, firstName, lastName, emailAddress, streetAddress, username, password, role)
+  //  }
+  class Riders(tag: Tag) extends Table[Rider](tag, "ZR_RIDERS") {
     def id = column[Int]("ID", O.PrimaryKey) // This is the primary key column
     def firstName = column[String]("FIRST_NAME")
     def lastName = column[String]("LAST_NAME")
-    def emailAddress = column[Option[String]]("STREET_ADDRESS")
+    def emailAddress = column[Option[String]]("EMAIL_ADDRESS")
     def streetAddress = column[Option[String]]("STREET_ADDRESS")
     def username = column[String]("USER_NAME")
     def password = column[Option[String]]("USER_PASSWORD")
     def role = column[Int]("USER_ROLE")
     // Every table needs a * projection with the same type as the table's type parameter
-    def * = (id, firstName, lastName, emailAddress, streetAddress, username, password, role)
+    def * = (id, firstName, lastName, emailAddress, streetAddress, username, password, role) <> (Rider.tupled, Rider.unapply _)
   }
   val riders = TableQuery[Riders]
 
