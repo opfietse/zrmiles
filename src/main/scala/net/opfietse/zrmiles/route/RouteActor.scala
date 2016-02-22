@@ -3,9 +3,11 @@ package zrmiles
 package route
 
 import akka.actor._
+import akka.event.Logging._
 import net.opfietse.zrmiles.db.riders.SlickRidersActorProvider
 import spray.http._
 import spray.routing._
+import spray.routing.directives.LogEntry
 
 import web.home.ZrmilesRoute
 
@@ -16,5 +18,15 @@ object RouteActor {
 class RouteActor extends HttpServiceActor with ZrmilesRoute with SlickRidersActorProvider {
   implicit def executionContext = context.dispatcher
 
-  def receive = runRoute(routes)
+  def receive = runRoute(
+    logRequestResponse(showRequestResponses _)(routes)
+  )
+
+  /**
+   * Log each request and response.
+   */
+  def showRequestResponses(request: HttpRequest): Any => Option[LogEntry] = {
+    case HttpResponse(status, _, _, _) => Some(LogEntry(s"${request.method} ${request.uri} ($status)", InfoLevel))
+    case response => Some(LogEntry(s"${request.method} ${request.uri} $response", WarningLevel))
+  }
 }

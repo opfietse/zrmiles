@@ -26,21 +26,15 @@ trait RidersRoute extends HttpService
 
   def log = LoggerFactory.getLogger("RiderRoute")
 
-  def handleSuccess(f: Future[String]): String = {
-    f.onSuccess {
-      case responseData =>
-        responseData
-    }
-    ""
-  }
-
   val ridersRoute = get {
-      path("riders") {
+    path("riders") {
+      pathEndOrSingleSlash {
         onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]]) {
           case Success(response) =>
             onComplete(response) {
               case Success(riders) =>
-                val html = Header + "<BODY>" + Menu + makeRidersTable(riders) + "</BODY>" + Footer
+                val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
+                  makeRidersTable(riders) + instructions + "</BODY>" + Footer
                 respondWithMediaType(`text/html`) {
                   complete(html)
                 }
@@ -57,85 +51,27 @@ trait RidersRoute extends HttpService
               complete("Oops .....")
             }
         }
-      } ~
-      path("riderstable") {
-        //        val f: Future[List[Riderr]] = (ridersActor ? GetAllRiders).mapTo[List[Riderr]]
-        onComplete((ridersActor ? GetAllRiders).mapTo[List[Riderr]]) {
-          case Success(response) =>
-            val html = Header + "<BODY>" + Menu + makeRidersTable(response) + "</BODY>" + Footer
-            respondWithMediaType(`text/html`) {
-              complete(html)
-            }
-
-        }
-      } ~
-      path("riderstables") {
-        val f: Future[List[Riderr]] = (ridersActor ? GetAllRiders).mapTo[List[Riderr]]
-        onSuccess(f) { response =>
-          //complete(makeRidersTable(response))
-          val html = Header + "<BODY>" + Menu + makeRidersTable(response) + "</BODY>" + Footer
-          respondWithMediaType(`text/html`) {
-            complete(html)
-          }
-
-        }
-      } ~
-      path("namess") {
-        onComplete((ridersActor ? GetFirstNames).mapTo[Future[Seq[String]]]) {
-          case Success(response) =>
-            val html = Header + "<BODY>" + Menu + response.toString /*response.mkString(" : ")*/ + "</BODY>" + Footer
-            respondWithMediaType(`text/html`) {
-              complete(html)
-            }
-          case Failure(t) =>
-            log.error("Error retreiving names", t)
-            respondWithMediaType(`text/html`) {
-              complete("Oops .....")
-            }
-        }
-      } ~
-      path("names") {
-        onComplete((ridersActor ? GetFirstNames).mapTo[Future[Seq[String]]]) {
-          case Success(response) =>
-            onComplete(response) {
-              case Success(riders) =>
-                val html = Header + "<BODY>" + Menu + riders.mkString(" : ") + "</BODY>" + Footer
-                respondWithMediaType(`text/html`) {
-                  complete(html)
-                }
-
-              case Failure(t) =>
-                log.error("Error retreiving names", t)
-                respondWithMediaType(`text/html`) {
-                  complete("Oops .....")
-                }
-            }
-          case Failure(t) =>
-            log.error("Error retreiving names", t)
-            respondWithMediaType(`text/html`) {
-              complete("Oops .....")
-            }
-        }
-      } ~
-      path("riderss") {
-        val f: Future[String] = (ridersActor ? GetAllRidersAsString).mapTo[String]
-        onSuccess(f) { response =>
-          complete(response)
-        }
       }
+    }
   }
 
-  def makeRidersTable(riders: List[Riderr]): String = {
-    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
-    "<table border=\"1\">" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
-  }
+  //  def makeRidersTable(riders: List[Riderr]): String = {
+  //    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
+  //    "<table border=\"1\"> summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
+  //  }
+
+  val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeRidersTable(riders: Seq[Rider]): String = {
-    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" +
+    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th><th>Email address</th><th>Location</th>"
+    val riderTableEntries = for (r <- riders) yield "<td>" + makeAddBikeLink(r) + "</td>" +
       "<td>" + r.firstName + "</td>" +
-      "<td>" + r.lastName + "</td>" +
+      "<td>" + makeUpdateRiderLink(r) + "</td>" +
       "<td>" + r.emailAddress.getOrElse("") + "</td>" +
       "<td>" + r.streetAddress.getOrElse("") + "</td>"
-    "<table border=\"1\">" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
+    "<table border=\"1\" summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + tableHeader + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }
+
+  def makeAddBikeLink(rider: Rider) = "<a href=\"bikes/add.jsp?riderId=" + rider.id + "\">" + rider.id + "</a>"
+  def makeUpdateRiderLink(rider: Rider) = "<a href=\"riders/update.jsp?riderId=" + rider.id + "\">" + rider.lastName + "</a>"
 }
