@@ -2,44 +2,29 @@ package net.opfietse.zrmiles
 package web
 package riders
 
-import akka.actor.ActorRef
+import org.slf4j.LoggerFactory
+
+import scala.concurrent._
+import scala.util._
+
+import akka.actor.{ ActorLogging, ActorRef }
 import akka.pattern.ask
 import spray.http.MediaTypes._
 import spray.http.StatusCodes
 import spray.routing.HttpService
 
 import db.riders._
-import model.Rider
-import net.opfietse.zrmiles.util.{ ExecutionContextSupport, ActorAskPattern }
+import model._
 import common.CommonHtml._
-import net.opfietse.zrmiles.db.riders.RidersActor.{ GetAllRidersAsString, GetAllRiders }
+import db.riders.RidersActor._
+import net.opfietse.zrmiles.util._
 
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+trait RidersRoute extends HttpService
+    with ExecutionContextSupport
+    with ActorAskPattern
+    with SlickRidersActorProvider {
 
-//object RiderMagnet {
-//  implicit def fromRiderFuture(future: Future[List[Rider]])(implicit ec: ExecutionContext) =
-//    new CompletionMagnet {
-//      type Result = String
-//
-//      def apply(): Result = Future {
-//        "Moi"
-//      }
-//    }
-//}
-
-trait RidersRoute extends HttpService with ExecutionContextSupport with ActorAskPattern with SlickRidersActorProvider {
-  //  val ridersActor: ActorRef
-
-  //  def handleSuccess(f: Future[String]): Unit = {
-  //    onSuccess(f) { responseData =>
-  //      complete(_)
-  //    }
-  //  }
-
-  def divide(a: Int, b: Int): Future[Int] = Future {
-    a / b
-  }
+  def log = LoggerFactory.getLogger("RiderRoute")
 
   def handleSuccess(f: Future[String]): String = {
     f.onSuccess {
@@ -49,63 +34,108 @@ trait RidersRoute extends HttpService with ExecutionContextSupport with ActorAsk
     ""
   }
 
-  //implicit val exectutionContext = context.dispatcher
+  val ridersRoute = get {
+      path("riders") {
+        onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]]) {
+          case Success(response) =>
+            onComplete(response) {
+              case Success(riders) =>
+                val html = Header + "<BODY>" + Menu + makeRidersTable(riders) + "</BODY>" + Footer
+                respondWithMediaType(`text/html`) {
+                  complete(html)
+                }
 
-  val ridersRoute = path("divide" / IntNumber / IntNumber) { (a, b) =>
-    onComplete(divide(a, b)) {
-      case Success(value) => complete(s"The result was $value")
-      case Failure(ex) => complete(StatusCodes.InternalServerError, s"An error occurred: ${ex.getMessage}")
-    }
-  } ~
-    path("moi") {
-      val f = Future { "Mooi" }
-      onSuccess(f) { response =>
-        complete(response)
-      }
-    } ~
-    path("riders") {
-      val f: Future[List[Rider]] = (ridersActor ? GetAllRiders).mapTo[List[Rider]]
-      onSuccess(f) { response =>
-        complete(response.mkString(":"))
-      }
-    } ~
-    path("riderss") {
-      val f: Future[String] = (ridersActor ? GetAllRidersAsString).mapTo[String]
-      onSuccess(f) { response =>
-        complete(response)
-      }
-    }
+              case Failure(t) =>
+                log.error("Error retreiving riders", t)
+                respondWithMediaType(`text/html`) {
+                  complete("Oops .....")
+                }
+            }
+          case Failure(t) =>
+            log.error("Error retreiving riders", t)
+            respondWithMediaType(`text/html`) {
+              complete("Oops .....")
+            }
+        }
+      } ~
+      path("riderstable") {
+        //        val f: Future[List[Riderr]] = (ridersActor ? GetAllRiders).mapTo[List[Riderr]]
+        onComplete((ridersActor ? GetAllRiders).mapTo[List[Riderr]]) {
+          case Success(response) =>
+            val html = Header + "<BODY>" + Menu + makeRidersTable(response) + "</BODY>" + Footer
+            respondWithMediaType(`text/html`) {
+              complete(html)
+            }
 
-  //  path("riders" / "riders.jsp") {
-  //    val f = (ridersActor ? GetAllRiders).mapTo[String]
-  //
-  //    //    //handleSuccess(f)
-  //    //    onSuccess(f) { responseData =>
-  //    //      complete(_)
-  //    //    }
-  //
-  //    onComplete(handleSuccess((ridersActor ? GetAllRiders).mapTo[String])) {
-  //      case Success(riders: String) =>
-  //        respondWithMediaType(`text/html`) {
-  //          complete(Header + "<BODY>" + Menu + riders + "</BODY>" + Footer)
-  //        }
-  //    }
-  //    //        onComplete((ridersActor ? GetAllRiders).mapTo[List[Rider]]) {
-  //    //          case Success(riders: List[Rider]) =>
-  //    //            respondWithMediaType(`text/html`) {
-  //    //              complete(Header + "<BODY>" + Menu + makeRidersTable(riders) + "</BODY>" + Footer)
-  //    //            }
-  //    //      //    val html = Header + "<BODY>" + Menu + Welcome + "</BODY>" + Footer
-  //    //      val riders = ridersActor ? GetAllRiders
-  //    //
-  //    //      respondWithMediaType(`text/html`) {
-  //    //        complete(Header + "<BODY>" + Menu + makeRidersTable(riders) + "</BODY>" + Footer)
-  //    //      }
-  //    //    }
-  //  }
+        }
+      } ~
+      path("riderstables") {
+        val f: Future[List[Riderr]] = (ridersActor ? GetAllRiders).mapTo[List[Riderr]]
+        onSuccess(f) { response =>
+          //complete(makeRidersTable(response))
+          val html = Header + "<BODY>" + Menu + makeRidersTable(response) + "</BODY>" + Footer
+          respondWithMediaType(`text/html`) {
+            complete(html)
+          }
 
-  def makeRidersTable(riders: List[Rider]): String = {
+        }
+      } ~
+      path("namess") {
+        onComplete((ridersActor ? GetFirstNames).mapTo[Future[Seq[String]]]) {
+          case Success(response) =>
+            val html = Header + "<BODY>" + Menu + response.toString /*response.mkString(" : ")*/ + "</BODY>" + Footer
+            respondWithMediaType(`text/html`) {
+              complete(html)
+            }
+          case Failure(t) =>
+            log.error("Error retreiving names", t)
+            respondWithMediaType(`text/html`) {
+              complete("Oops .....")
+            }
+        }
+      } ~
+      path("names") {
+        onComplete((ridersActor ? GetFirstNames).mapTo[Future[Seq[String]]]) {
+          case Success(response) =>
+            onComplete(response) {
+              case Success(riders) =>
+                val html = Header + "<BODY>" + Menu + riders.mkString(" : ") + "</BODY>" + Footer
+                respondWithMediaType(`text/html`) {
+                  complete(html)
+                }
+
+              case Failure(t) =>
+                log.error("Error retreiving names", t)
+                respondWithMediaType(`text/html`) {
+                  complete("Oops .....")
+                }
+            }
+          case Failure(t) =>
+            log.error("Error retreiving names", t)
+            respondWithMediaType(`text/html`) {
+              complete("Oops .....")
+            }
+        }
+      } ~
+      path("riderss") {
+        val f: Future[String] = (ridersActor ? GetAllRidersAsString).mapTo[String]
+        onSuccess(f) { response =>
+          complete(response)
+        }
+      }
+  }
+
+  def makeRidersTable(riders: List[Riderr]): String = {
     val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
-    riderTableEntries.mkString("<tr>", "", "</tr>")
+    "<table border=\"1\">" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
+  }
+
+  def makeRidersTable(riders: Seq[Rider]): String = {
+    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" +
+      "<td>" + r.firstName + "</td>" +
+      "<td>" + r.lastName + "</td>" +
+      "<td>" + r.emailAddress.getOrElse("") + "</td>" +
+      "<td>" + r.streetAddress.getOrElse("") + "</td>"
+    "<table border=\"1\">" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }
 }
