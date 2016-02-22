@@ -27,24 +27,16 @@ trait RidersRoute extends HttpService
   def log = LoggerFactory.getLogger("RiderRoute")
 
   val ridersRoute = get {
-    path("riders") {
+    path("riders" / "riders.jsp") {
       pathEndOrSingleSlash {
-        onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]]) {
-          case Success(response) =>
-            onComplete(response) {
-              case Success(riders) =>
-                val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
-                  makeRidersTable(riders) + instructions + "</BODY>" + Footer
-                respondWithMediaType(`text/html`) {
-                  complete(html)
-                }
-
-              case Failure(t) =>
-                log.error("Error retreiving riders", t)
-                respondWithMediaType(`text/html`) {
-                  complete("Oops .....")
-                }
+        onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]].flatMap(riders => riders)) {
+          case Success(riders) =>
+            val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
+              makeRidersTable(riders) + instructions + "</BODY>" + Footer
+            respondWithMediaType(`text/html`) {
+              complete(html)
             }
+
           case Failure(t) =>
             log.error("Error retreiving riders", t)
             respondWithMediaType(`text/html`) {
