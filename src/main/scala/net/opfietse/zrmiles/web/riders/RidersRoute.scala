@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util._
 
-import akka.actor.{ ActorLogging, ActorRef }
+import akka.actor._
 import akka.pattern.ask
 import spray.http.MediaTypes._
 import spray.http.StatusCodes
@@ -24,7 +24,7 @@ trait RidersRoute extends HttpService
     with ActorAskPattern
     with SlickRidersActorProvider {
 
-  def log = LoggerFactory.getLogger("RiderRoute")
+  private def log = LoggerFactory.getLogger("RiderRoute")
 
   val ridersRoute = get {
     path("riders") {
@@ -60,7 +60,7 @@ trait RidersRoute extends HttpService
   //    "<table border=\"1\"> summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   //  }
 
-  val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
+  private val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeRidersTable(riders: Seq[Rider]): String = {
     val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th><th>Email address</th><th>Location</th>"
@@ -69,6 +69,7 @@ trait RidersRoute extends HttpService
       "<td>" + makeUpdateRiderLink(r) + "</td>" +
       "<td>" + r.emailAddress.getOrElse("") + "</td>" +
       "<td>" + r.streetAddress.getOrElse("") + "</td>"
+
     "<table border=\"1\" summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + tableHeader + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }
 

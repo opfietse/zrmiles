@@ -1,19 +1,19 @@
 package net.opfietse.zrmiles.db.riders
 
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.util._
+
 import akka.actor._
-import net.opfietse.zrmiles.db.riders.RidersActor._
-import net.opfietse.zrmiles.util.ActorRefFactorySupport
 import org.joda.time.DateTime
 
 import slick.driver.MySQLDriver.api._
 
 import net.opfietse.zrmiles.db.ZrMilesSchema._
 import net.opfietse.zrmiles.db.ZrMilesSchema.Riders
-import net.opfietse.zrmiles.model.{ Riderr, Rider }
-
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.util.{ Success, Failure }
+import net.opfietse.zrmiles.model._
+import net.opfietse.zrmiles.db.riders.RidersActor._
+import net.opfietse.zrmiles.util.ActorRefFactorySupport
 
 object RidersActor {
   def props = Props[RidersActor]
