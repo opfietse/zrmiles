@@ -5,6 +5,17 @@ case class Motorcycle(
   riderId: Int,
   make: String,
   model: String,
-  year: Option[Int],
+  year: Int,
   distanceUnit: Int
+)
+
+case class MotorcycleWithRider(
+  id: Int,
+  riderId: Int,
+  make: String,
+  model: String,
+  year: Int,
+  distanceUnit: Int,
+  firstName: String,
+  lastName: String
 )

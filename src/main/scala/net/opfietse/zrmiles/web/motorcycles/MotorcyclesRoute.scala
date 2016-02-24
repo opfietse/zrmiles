@@ -29,24 +29,16 @@ trait MotorcyclesRoute extends HttpService
   private def log = LoggerFactory.getLogger("RiderRoute")
 
   val motorcyclesRoute = get {
-    path("bikes") {
+    path("bikes" / "bikes.jsp") {
       pathEndOrSingleSlash {
-        onComplete((motorcyclesActor ? GetAllMotorcycles).mapTo[Future[Seq[Motorcycle]]]) {
-          case Success(response) =>
-            onComplete(response) {
-              case Success(riders) =>
-                val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
-                  makeMotorcyclesTable(riders) + instructions + "</BODY>" + Footer
-                respondWithMediaType(`text/html`) {
-                  complete(html)
-                }
-
-              case Failure(t) =>
-                log.error("Error retreiving motorcycles", t)
-                respondWithMediaType(`text/html`) {
-                  complete("Oops .....")
-                }
+        onComplete((motorcyclesActor ? GetAllMotorcyclesWithRiders).mapTo[Future[Seq[MotorcycleWithRider]]].flatMap(motorcycles => motorcycles)) {
+          case Success(bikes) =>
+            val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
+              makeMotorcyclesTableW(bikes) + instructions + "</BODY>" + Footer
+            respondWithMediaType(`text/html`) {
+              complete(html)
             }
+
           case Failure(t) =>
             log.error("Error retreiving motorcycles", t)
             respondWithMediaType(`text/html`) {
@@ -70,7 +62,20 @@ trait MotorcyclesRoute extends HttpService
       "<td>" + m.riderId + "</td>" +
       "<td>" + m.make + "</td>" +
       "<td>" + m.model + "</td>" +
-      "<td>" + m.year.getOrElse("") + "</td>" +
+      "<td>" + m.year + "</td>" +
+      "<td>" + m.distanceUnit + "</td>"
+
+    "<table border=\"1\" summary=\"Lists the bikes currently in the database\"><CAPTION><EM>Bikes</EM></CAPTION>" +
+      tableHeader + motorcycleTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
+  }
+
+  def makeMotorcyclesTableW(motorcycles: Seq[MotorcycleWithRider]): String = {
+    val tableHeader = "<th>Id</th><th>Owner</th><th>Make</th><th>Model</th><th>Year</th><th>Odometer in</th><th>Current mileage</th>"
+    val motorcycleTableEntries = for (m <- motorcycles) yield "<td>" + makeMilesLink(m) + "</td>" +
+      "<td>" + m.firstName + " " + m.lastName + "</td>" +
+      "<td>" + m.make + "</td>" +
+      "<td>" + m.model + "</td>" +
+      "<td>" + m.year + "</td>" +
       "<td>" + m.distanceUnit + "</td>"
 
     "<table border=\"1\" summary=\"Lists the bikes currently in the database\"><CAPTION><EM>Bikes</EM></CAPTION>" +
@@ -78,6 +83,7 @@ trait MotorcyclesRoute extends HttpService
   }
 
   def makeMilesLink(motorcycle: Motorcycle) = "<a href=\"miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
+  def makeMilesLink(motorcycle: MotorcycleWithRider) = "<a href=\"miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
   //  def makeAddBikeLink(rider: Rider) = "<a href=\"bikes/add.jsp?riderId=" + rider.id + "\">" + rider.id + "</a>"
   //  def makeUpdateRiderLink(rider: Rider) = "<a href=\"riders/update.jsp?riderId=" + rider.id + "\">" + rider.lastName + "</a>"
 }
