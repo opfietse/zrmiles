@@ -16,7 +16,7 @@ trait ZrmilesRoute extends HttpService
     with RidersRoute
     with ExecutionContextSupport {
 
-  val routes = homeIndexRoute ~ indexRoute ~ ridersRoute
+  val routes = indexRoute ~ homeIndexRoute ~ ridersRoute
 }
 
 trait HomeIndexRoute extends HttpService {
