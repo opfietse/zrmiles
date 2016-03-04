@@ -1,6 +1,7 @@
 package net.opfietse.zrmiles.db.riders
 
 import akka.actor._
+import net.opfietse.zrmiles.db.Db
 import net.opfietse.zrmiles.db.riders.RidersActor._
 import net.opfietse.zrmiles.util.ActorRefFactorySupport
 import org.joda.time.DateTime
@@ -24,6 +25,7 @@ object RidersActor {
   case object GetAllRiders extends Command
   case object GetFirstNames extends Command
   case object GetTime extends Command
+  case class AddRider(firstNAme: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String])
 }
 
 class RidersActor extends Actor with ActorLogging {
@@ -46,6 +48,10 @@ class RidersActor extends Actor with ActorLogging {
     case GetFirstNames =>
       val names = getAllAsRider
       sender ! names
+
+    case AddRider(firstName, lastName, emailAddress, streetAddress) =>
+      val newRider = addRider(firstName, lastName, emailAddress, streetAddress)
+    //      sender ! rider
   }
 
   def getTime = {
@@ -54,8 +60,8 @@ class RidersActor extends Actor with ActorLogging {
   }
 
   def getAllRiders: Future[Seq[Rider]] = {
-    log.info("Run GetAllRiders ++++++++++++")
-    val db = Database.forConfig("mysql")
+    log.info("GetAllRiders ++++++++++++")
+    val db = Db.db
 
     try {
       //    val dbRidersFirstNames = for (r <- riders) yield Rider(r.id, r.firstName, r.lastName, r.streetAddress, r.emailAddress, r.username, r.password, r.role)
@@ -63,15 +69,16 @@ class RidersActor extends Actor with ActorLogging {
       val q = dbRidersFirstNames.result
       val f: Future[Seq[Rider]] = db.run(q)
 
-      //      f
-      //      val res = f.onSuccess {
-      //        case rs =>
-      //      }
-      //
-
       val res = for (names <- f) yield names
       res
-      //    List(Riderr(1, "Mark", "Reuvekamp", Some("email"), Some("street"), "username", Some("password"), 10), Riderr(2, "Tom", "Witt", Some("email"), Some("street"), "username", Some("password"), 10))
+    } finally db.close
+  }
+
+  def addRider(firstName: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String]) = {
+    val db = Db.db
+
+    try {
+      //      riders += Rider(0, firstName, lastName, emailAddress, streetAddress)
     } finally db.close
   }
 
