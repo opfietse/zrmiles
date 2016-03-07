@@ -65,8 +65,8 @@ class RidersActor extends Actor with ActorLogging {
 
     try {
       //    val dbRidersFirstNames = for (r <- riders) yield Rider(r.id, r.firstName, r.lastName, r.streetAddress, r.emailAddress, r.username, r.password, r.role)
-      val dbRidersFirstNames = for (r <- riders) yield r
-      val q = dbRidersFirstNames.result
+      val dbRiders = for (r <- riders) yield r
+      val q = dbRiders.result
       val f: Future[Seq[Rider]] = db.run(q)
 
       val res = for (names <- f) yield names
@@ -78,7 +78,14 @@ class RidersActor extends Actor with ActorLogging {
     val db = Db.db
 
     try {
-      //      riders += Rider(0, firstName, lastName, emailAddress, streetAddress)
+      //      val maxIdQuery = riders.map(_.id)
+      //
+      //      val currentMaxId /*: slick.lifted.Rep[Option[Int]]*/ = maxIdQuery.max.result
+      //      println(currentMaxId.statements)
+      val insert = riders += Rider(1500, firstName, lastName, emailAddress, streetAddress, "X", None, 0)
+      val newRider = db.run(insert)
+      println("N: " + newRider)
+      for (a <- newRider) yield a
     } finally db.close
   }
 

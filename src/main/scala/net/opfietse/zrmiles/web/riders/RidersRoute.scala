@@ -59,7 +59,16 @@ trait RidersRoute extends HttpService
       path("riders" / "add.jsp") {
         pathEndOrSingleSlash {
           formFields('firstName, 'lastName, 'emailAddress.?, 'streetAddress.?) { (fn, ln, ea, sa) =>
-            complete(fn)
+            onComplete((ridersActor ? AddRider(fn, ln, ea, sa)).mapTo[Future[Option[Int]]].flatMap(i => i)) {
+              case Success(newRider) =>
+                respondWithMediaType(`text/html`) {
+                  complete(fn)
+                }
+              case Failure(f) =>
+                respondWithMediaType(`text/html`) {
+                  complete(StatusCodes.InternalServerError, f.getMessage)
+                }
+            }
           }
         }
       }

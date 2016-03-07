@@ -2,14 +2,17 @@ package net.opfietse
 package zrmiles
 package route
 
+import scala.concurrent._
+import scala.concurrent.duration._
+
 import akka.actor._
 import akka.event.Logging._
-import net.opfietse.zrmiles.db.riders.SlickRidersActorProvider
 import spray.http._
 import spray.routing._
 import spray.routing.directives.LogEntry
 
 import web.home.ZrmilesRoute
+import net.opfietse.zrmiles.db.riders.SlickRidersActorProvider
 
 object RouteActor {
   def props = Props[RouteActor]
@@ -17,6 +20,8 @@ object RouteActor {
 }
 class RouteActor extends HttpServiceActor with ZrmilesRoute with SlickRidersActorProvider {
   implicit def executionContext = context.dispatcher
+
+  implicit val timeout = 10 seconds
 
   def receive = runRoute(
     logRequestResponse(showRequestResponses _)(routes)
