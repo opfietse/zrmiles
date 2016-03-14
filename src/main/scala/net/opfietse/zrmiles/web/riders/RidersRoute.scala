@@ -5,12 +5,13 @@ package riders
 import org.slf4j.LoggerFactory
 
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.util._
 
-import akka.actor.{ ActorLogging, ActorRef }
+import akka.actor._
 import akka.pattern.ask
 import spray.http.MediaTypes._
-import spray.http.{ FormData, StatusCodes }
+import spray.http._
 import spray.routing.HttpService
 
 import db.riders._
@@ -29,7 +30,7 @@ trait RidersRoute extends HttpService
   val ridersRoute = get {
     path("riders" / "riders.jsp") {
       pathEndOrSingleSlash {
-        onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]].flatMap(riders => riders)) {
+        onComplete((ridersActor ? GetAllRiders).mapTo[List[Rider]]) {
           case Success(riders) =>
             val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
               makeRidersTable(riders) + instructions + "</BODY>" + Footer
@@ -45,6 +46,24 @@ trait RidersRoute extends HttpService
         }
       }
     } ~
+      path("riders" / "ridersslick.jsp") {
+        pathEndOrSingleSlash {
+          onComplete((ridersActor ? GetAllRidersSlick).mapTo[Future[Seq[Rider]]].flatMap(riders => riders)) {
+            case Success(riders) =>
+              val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
+                makeRidersTable(riders) + instructions + "</BODY>" + Footer
+              respondWithMediaType(`text/html`) {
+                complete(html)
+              }
+
+            case Failure(t) =>
+              log.error("Error retreiving riders", t)
+              respondWithMediaType(`text/html`) {
+                complete("Oops .....")
+              }
+          }
+        }
+      } ~
       path("riders" / "add.jsp") {
         pathEndOrSingleSlash {
 
@@ -58,15 +77,18 @@ trait RidersRoute extends HttpService
     post {
       path("riders" / "add.jsp") {
         pathEndOrSingleSlash {
-          formFields('firstName, 'lastName, 'emailAddress.?, 'streetAddress.?) { (fn, ln, ea, sa) =>
-            onComplete((ridersActor ? AddRider(fn, ln, ea, sa)).mapTo[Future[Option[Int]]].flatMap(i => i)) {
+          formFields('firstName, 'lastName, 'streetAddress.?) { (fn, ln, sa) =>
+            onComplete((ridersActor ? AddRider(fn, ln, None, sa)).mapTo[Rider]) {
               case Success(newRider) =>
+                val html = Header + "<BODY>" + Menu + welcomeNewRider(newRider) + "</BODY>" + Footer
                 respondWithMediaType(`text/html`) {
-                  complete(fn)
+                  complete(html)
                 }
               case Failure(f) =>
+                log.error("Error adding rider", f)
+                val html = Header + "<BODY>" + Menu + "<br /><span class=\"errorText\">" + f.getMessage + "</span><br />" + riderForm(Some(fn), Some(ln), None, None) + "</BODY>" + Footer
                 respondWithMediaType(`text/html`) {
-                  complete(StatusCodes.InternalServerError, f.getMessage)
+                  complete(html)
                 }
             }
           }
@@ -76,12 +98,15 @@ trait RidersRoute extends HttpService
 
   //------ Add -------
 
-  def welcomeNewRider(firstName: String, lastName: String, streetAddress: Option[String]) = {
-    val name = s"Welcome, $firstName $lastName"
-    val from = streetAddress match {
-      case Some(address) => s" from $streetAddress"
-      case None => ""
+  def welcomeNewRider(rider: Rider) = {
+    val name = s"Welcome, ${rider.firstName} ${rider.lastName}"
+    val from = rider.streetAddress match {
+      case Some(address) if (address.nonEmpty) => s" from $address"
+      case _ => ""
     }
+
+    "<br /><br />" + name + from + ".<BR><BR><BR><A href=\"../bikes/add.jsp?riderId=" + rider.id + "\">Click here to enter your bike(s)</A>"
+    //<% }
   }
 
   def riderForm(firstName: Option[String], lastName: Option[String], emailAddress: Option[String], streetAddress: Option[String]) = {
@@ -108,11 +133,11 @@ trait RidersRoute extends HttpService
       "</TD><TD>" +
       "<INPUT type=\"text\" size=\"40\" maxlength=\"40\" name=\"lastName\" value=\"" + lastNameFieldValue + "\">" +
       "</TD></TR>" +
-      "<TR><TD>" +
-      "Email address" +
-      "</TD><TD>" +
-      "<INPUT type=\"text\" size=\"50\" maxlength=\"50\" name=\"emailAddress\" value=\"" + emailAddressFieldValue + "\">" +
-      "</TD></TR>" +
+      //      "<TR><TD>" +
+      //      "Email address" +
+      //      "</TD><TD>" +
+      //      "<INPUT type=\"text\" size=\"50\" maxlength=\"50\" name=\"emailAddress\" value=\"" + emailAddressFieldValue + "\">" +
+      //      "</TD></TR>" +
       "<TR><TD>" +
       "Location" +
       "</TD><TD>" +
@@ -186,11 +211,11 @@ Please enter your data below.
   val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeRidersTable(riders: Seq[Rider]): String = {
-    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th><th>Email address</th><th>Location</th>"
+    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th>" /*<th>Email address</th>*/ + "<th>Location</th>"
     val riderTableEntries = for (r <- riders) yield "<td>" + makeAddBikeLink(r) + "</td>" +
       "<td>" + r.firstName + "</td>" +
       "<td>" + makeUpdateRiderLink(r) + "</td>" +
-      "<td>" + r.emailAddress.getOrElse("") + "</td>" +
+      // "<td>" + r.emailAddress.getOrElse("") + "</td>" +
       "<td>" + r.streetAddress.getOrElse("") + "</td>"
     "<table border=\"1\" summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + tableHeader + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }

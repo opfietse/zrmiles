@@ -1,9 +1,14 @@
 package net.opfietse.zrmiles.db.riders
 
+import net.opfietse.zrmiles.Settings
+
+import scala.collection.JavaConversions._
+
 import akka.actor._
 import net.opfietse.zrmiles.db.Db
 import net.opfietse.zrmiles.db.riders.RidersActor._
 import net.opfietse.zrmiles.util.ActorRefFactorySupport
+import nl.wobble.zrmiles.dao.{ EnvDbInfo, DaoFactory }
 import org.joda.time.DateTime
 
 import slick.driver.MySQLDriver.api._
@@ -23,6 +28,7 @@ object RidersActor {
   sealed trait Command
   case object GetAllRidersAsString extends Command
   case object GetAllRiders extends Command
+  case object GetAllRidersSlick extends Command
   case object GetFirstNames extends Command
   case object GetTime extends Command
   case class AddRider(firstNAme: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String])
@@ -31,6 +37,11 @@ object RidersActor {
 class RidersActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
+  //
+  //  val settings = Settings(context)
+  //
+  //  implicit val timeout = settings.Timeout.AskTimeout
+  //  println(s"Timeout in actor: $timeout")
 
   def receive: Receive = {
     case GetTime =>
@@ -42,16 +53,22 @@ class RidersActor extends Actor with ActorLogging {
       val riders = getAllRidersAsString
       sender ! riders
     case GetAllRiders =>
-      //      getAllDbRiders
       val riders = getAllRiders
+      sender ! riders
+    case GetAllRidersSlick =>
+      val riders = getAllRidersSlick
       sender ! riders
     case GetFirstNames =>
       val names = getAllAsRider
       sender ! names
 
     case AddRider(firstName, lastName, emailAddress, streetAddress) =>
-      val newRider = addRider(firstName, lastName, emailAddress, streetAddress)
-    //      sender ! rider
+      try {
+        val newRider = addRider(firstName, lastName, emailAddress, streetAddress)
+        sender ! newRider
+      } catch {
+        case e: Exception => sender ! Status.Failure(e)
+      }
   }
 
   def getTime = {
@@ -59,8 +76,40 @@ class RidersActor extends Actor with ActorLogging {
     now.toString()
   }
 
-  def getAllRiders: Future[Seq[Rider]] = {
+  def getAllRiders: List[Rider] = {
     log.info("GetAllRiders ++++++++++++")
+    val javaRiders: java.util.ArrayList[nl.wobble.zrmiles.common.Rider] = DaoFactory.getInstance().getRidersDao(new EnvDbInfo).findAll("ID").asInstanceOf[java.util.ArrayList[nl.wobble.zrmiles.common.Rider]]
+
+    val riders: List[Rider] = javaRiders.toList.map(rider => toScalaRider(rider))
+    riders
+  }
+
+  def toScalaRider(rider: nl.wobble.zrmiles.common.Rider): Rider = {
+    val emailAddress = if (rider.getEmailAddress == null)
+      None
+    else
+      Some(rider.getEmailAddress)
+
+    val streetAddress = if (rider.getStreetAddress == null)
+      None
+    else
+      Some(rider.getStreetAddress)
+
+    val password = if (rider.getUserPassword == null)
+      None
+    else
+      Some(rider.getUserPassword)
+
+    Rider(rider.getId, rider.getFirstName, rider.getLastName, emailAddress, streetAddress, rider.getUserName, password, rider.getUserRole)
+  }
+
+  def toJavaRider(rider: Rider): nl.wobble.zrmiles.common.Rider = {
+    new nl.wobble.zrmiles.common.Rider(rider.id, rider.firstName, rider.lastName, rider.emailAddress.getOrElse(null),
+      rider.streetAddress.getOrElse(null), rider.username, rider.password.getOrElse(null), rider.role)
+  }
+
+  def getAllRidersSlick: Future[Seq[Rider]] = {
+    log.info("GetAllRidersSlick ++++++++++++")
     val db = Db.db
 
     try {
@@ -74,7 +123,24 @@ class RidersActor extends Actor with ActorLogging {
     } finally db.close
   }
 
-  def addRider(firstName: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String]) = {
+  def addRider(
+    firstName: String,
+    lastName: String,
+    emailAddress: Option[String],
+    streetAddress: Option[String]
+  ): Rider = {
+
+    require(!firstName.isEmpty, "First name cannot be empty")
+    require(!lastName.isEmpty, "Last name cannot be empty")
+
+    val ridersDao = DaoFactory.getInstance().getRidersDao(new EnvDbInfo)
+    val newKey = ridersDao.
+      add(toJavaRider(Rider(0, firstName, lastName, emailAddress, streetAddress, "X", None, 0))) //.asInstanceOf[Int]]
+
+    toScalaRider(ridersDao.findById(newKey))
+  }
+
+  def addRiderSlick(firstName: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String]) = {
     val db = Db.db
 
     try {

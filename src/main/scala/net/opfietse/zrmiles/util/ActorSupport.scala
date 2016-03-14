@@ -7,7 +7,7 @@ import akka.util.Timeout
 
 trait ActorAskPattern {
   import akka.pattern.ask
-  implicit val AskTimeout = Timeout(5 seconds)
+  implicit val AskTimeout = Timeout(15 seconds)
 }
 
 trait ActorRefFactorySupport {
