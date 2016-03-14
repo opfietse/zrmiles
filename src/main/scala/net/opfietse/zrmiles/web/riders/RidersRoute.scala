@@ -96,8 +96,6 @@ trait RidersRoute extends HttpService
       }
     }
 
-  //------ Add -------
-
   def welcomeNewRider(rider: Rider) = {
     val name = s"Welcome, ${rider.firstName} ${rider.lastName}"
     val from = rider.streetAddress match {
@@ -106,7 +104,6 @@ trait RidersRoute extends HttpService
     }
 
     "<br /><br />" + name + from + ".<BR><BR><BR><A href=\"../bikes/add.jsp?riderId=" + rider.id + "\">Click here to enter your bike(s)</A>"
-    //<% }
   }
 
   def riderForm(firstName: Option[String], lastName: Option[String], emailAddress: Option[String], streetAddress: Option[String]) = {
@@ -118,8 +115,6 @@ trait RidersRoute extends HttpService
     val lastNameFieldValue = ""
     val emailAddressFieldValue = ""
     val streetAddressFieldValue = ""
-
-    // action="add.jsp"
 
     "<P>Please enter your data below.</P><FORM name=\"addRiderForm\" method=\"POST\">" +
       "<TABLE border=\"0\"><CAPTION><EM>Rider</EM></CAPTION>" +
@@ -133,11 +128,6 @@ trait RidersRoute extends HttpService
       "</TD><TD>" +
       "<INPUT type=\"text\" size=\"40\" maxlength=\"40\" name=\"lastName\" value=\"" + lastNameFieldValue + "\">" +
       "</TD></TR>" +
-      //      "<TR><TD>" +
-      //      "Email address" +
-      //      "</TD><TD>" +
-      //      "<INPUT type=\"text\" size=\"50\" maxlength=\"50\" name=\"emailAddress\" value=\"" + emailAddressFieldValue + "\">" +
-      //      "</TD></TR>" +
       "<TR><TD>" +
       "Location" +
       "</TD><TD>" +
@@ -151,71 +141,13 @@ trait RidersRoute extends HttpService
       "* = Required."
   }
 
-  /*
-    <% if (newRider.getStreetAddress() != null) { %>
-    from <%= newRider.getStreetAddress() %>.<BR><BR>
-  <BR><A href="../bikes/add.jsp?riderId=<%=newRider.getId()%>>Click here to enter your bike(s)</A>
-<% }
-}
-  } else {
-%>
-<P>
-Please enter your data below.
-</P>
-<FORM name="addRiderForm" method="POST">
-<TABLE border="0">
-  <CAPTION><EM>Rider</EM></CAPTION>
-    <TR><TD>
-      First name *
-    </TD><TD>
-      <INPUT type="text" size="20" maxlength="20" name="firstName"
-             value="<% if (firstName != null) {%><%= firstName %><% } %>">
-      </TD></TR>
-      <TR><TD>
-        Last name *
-      </TD><TD>
-        <INPUT type="text" size="40" maxlength="40" name="lastName"
-               value="<% if (lastName != null) {%><%= lastName %><% } %>">
-        </TD></TR>
-        <TR><TD>
-          Email address
-        </TD><TD>
-          <INPUT type="text" size="50" maxlength="50" name="emailAddress"
-                 value="<% if (emailAddress != null) {%><%= emailAddress %><% } %>">
-          </TD></TR>
-          <TR><TD>
-            Location
-          </TD><TD>
-            <INPUT type="text" size="50" maxlength="50" name="streetAddress"
-                   value="<% if (streetAddress != null) {%><%= streetAddress %><% } %>">
-            </TD></TR>
-            <TR>
-              <TD colspan="2" align="center"><INPUT type="submit" name="addRider" value="Add">
-              </TR>
-              </TABLE>
-            </FORM>
-            * = Required.
-            <% } %>
-            </BODY>
-          </HTML>
-
-*/
-
-  //-------
-
-  //  def makeRidersTable(riders: List[Riderr]): String = {
-  //    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
-  //    "<table border=\"1\"> summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
-  //  }
-
   val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeRidersTable(riders: Seq[Rider]): String = {
-    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th>" /*<th>Email address</th>*/ + "<th>Location</th>"
+    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th><th>Location</th>"
     val riderTableEntries = for (r <- riders) yield "<td>" + makeAddBikeLink(r) + "</td>" +
       "<td>" + r.firstName + "</td>" +
       "<td>" + makeUpdateRiderLink(r) + "</td>" +
-      // "<td>" + r.emailAddress.getOrElse("") + "</td>" +
       "<td>" + r.streetAddress.getOrElse("") + "</td>"
     "<table border=\"1\" summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + tableHeader + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }
