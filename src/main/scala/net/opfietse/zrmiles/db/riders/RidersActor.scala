@@ -37,18 +37,8 @@ object RidersActor {
 class RidersActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
-  //
-  //  val settings = Settings(context)
-  //
-  //  implicit val timeout = settings.Timeout.AskTimeout
-  //  println(s"Timeout in actor: $timeout")
 
   def receive: Receive = {
-    case GetTime =>
-      log.info("Time requested **********************************")
-      getAllDbRiders
-      val riders = getTime
-      sender ! riders
     case GetAllRidersAsString =>
       val riders = getAllRidersAsString
       sender ! riders
@@ -148,7 +138,7 @@ class RidersActor extends Actor with ActorLogging {
       //
       //      val currentMaxId /*: slick.lifted.Rep[Option[Int]]*/ = maxIdQuery.max.result
       //      println(currentMaxId.statements)
-      val insert = riders += Rider(1500, firstName, lastName, emailAddress, streetAddress, "X", None, 0)
+      val insert = riders += Rider(1500, firstName, lastName, None, streetAddress, "X", None, 0)
       val newRider = db.run(insert)
       println("N: " + newRider)
       for (a <- newRider) yield a
@@ -160,51 +150,6 @@ class RidersActor extends Actor with ActorLogging {
     //    getAllRiders.mkString(",")
   }
 
-  def getAllDbRiders /*: Future[Seq[Rider]]*/ = {
-    log.info("get from db  ===============================")
-    //    val db = Database.forConfig("mysql")
-    //    try {
-    //      //      //      db.run(riders.result).map((id, firstName, lastName, emailAddress, streetAddress, username, password, role) => Rider(iid, firstName, lastName, emailAddress, streetAddress, username, password, role))
-    //
-    //      //db.run(riders.result).map((id, firstName, lastName, emailAddress, streetAddress, username, password, role)).forEach( => Rider(iid, firstName, emailAddress, streetAddress, username, password, role))
-    //
-    //      //      val ridersFromDb = db.run(riders.result).map(_.foreach {
-    //      //        //        println("In foreach ++++++++++")
-    //      //        case (id, firstName, lastName, emailAddress, streetAddress, username, password, role) => println("Rider: " + firstName)
-    //      //        case _ => println("something else ...........................")
-    //      //      })
-    //      //ridersFromDb
-    //      //
-    //      //      val riderss: Seq[Rider] = for (r <- ridersFromDb) yield Rider(
-    //      //        r.id.asInstanceOf[Int],
-    //      //        r.firstName.toString(),
-    //      //        r.lastName.toString(),
-    //      //        r.emailAddress.toString(),
-    //      //        r.streetAddress.toString(),
-    //      //        r.username.toString(),
-    //      //        r.password.toString(),
-    //      //        r.role.asInstanceOf[Int]
-    //      //      )
-    //      //      riders
-    //      //
-    //      //      val q = for (r <- riders) yield (r.id, r.firstName, r.lastName, r.emailAddress, r.streetAddress, r.username, r.password, r.role)
-    //      //      val q = for (r <- riders) yield r
-    //      //      val a = q.result
-    //      //      val f: Future[Seq[Rider]] = db.run(a)
-    //      //      f
-    //
-    //      Await.result(
-    //        db.run(riders.result).map(_.foreach {
-    //          case (id, firstName, lastName, emailAddress, streetAddress, username, password, role) =>
-    //            println("  " + firstName + "\t" + lastName + "\t" + emailAddress + "\t" + streetAddress + "\t" + role)
-    //          case _ => log.info("something else")
-    //        }), Duration.Inf
-    //      )
-    //
-    //    } finally db.close
-  }
-
-  //  def getAllAsRider: Seq[String] = {
   def getAllAsRider: Future[Seq[String]] = {
     log.info("get all names from db  ===============================")
     val db = Database.forConfig("mysql")
@@ -214,28 +159,8 @@ class RidersActor extends Actor with ActorLogging {
       val q = dbRidersFirstNames.result
       val f: Future[Seq[String]] = db.run(q)
 
-      //      f
-      //      val res = f.onSuccess {
-      //        case rs =>
-      //      }
-      //
-
       val res = for (names <- f) yield names
       res
-      //      val a = Future { "abcd " }
-      //      f.map(name => name)
-
-      //      val res: Seq[String] = f onComplete {
-      //        case Success(names) =>
-      //          val n = for (name <- names) yield name
-      //          println(s"N: $n")
-      //          n
-      //        case Failure(t) => throw t
-      //      }
-      //
-      //      println(s"Res: $res")
-      //
-      //      Seq("Mark")
     } finally db.close
   }
 
