@@ -5,12 +5,13 @@ package riders
 import org.slf4j.LoggerFactory
 
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.util._
 
-import akka.actor.{ ActorLogging, ActorRef }
+import akka.actor._
 import akka.pattern.ask
 import spray.http.MediaTypes._
-import spray.http.StatusCodes
+import spray.http._
 import spray.routing.HttpService
 
 import db.riders._
@@ -29,7 +30,7 @@ trait RidersRoute extends HttpService
   val ridersRoute = get {
     path("riders" / "riders.jsp") {
       pathEndOrSingleSlash {
-        onComplete((ridersActor ? GetAllRiders).mapTo[Future[Seq[Rider]]].flatMap(riders => riders)) {
+        onComplete((ridersActor ? GetAllRiders).mapTo[List[Rider]]) {
           case Success(riders) =>
             val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
               makeRidersTable(riders) + instructions + "</BODY>" + Footer
@@ -44,8 +45,163 @@ trait RidersRoute extends HttpService
             }
         }
       }
+    } ~
+      path("riders" / "ridersslick.jsp") {
+        pathEndOrSingleSlash {
+          onComplete((ridersActor ? GetAllRidersSlick).mapTo[Future[Seq[Rider]]].flatMap(riders => riders)) {
+            case Success(riders) =>
+              val html = Header + "<BODY>" + Menu + "<BR/><BR/>All riders in the database.<BR/><BR />" +
+                makeRidersTable(riders) + instructions + "</BODY>" + Footer
+              respondWithMediaType(`text/html`) {
+                complete(html)
+              }
+
+            case Failure(t) =>
+              log.error("Error retreiving riders", t)
+              respondWithMediaType(`text/html`) {
+                complete("Oops .....")
+              }
+          }
+        }
+      } ~
+      path("riders" / "add.jsp") {
+        pathEndOrSingleSlash {
+
+          val html = Header + "<BODY>" + Menu + riderForm(None, None, None, None) + "</BODY>" + Footer
+          respondWithMediaType(`text/html`) {
+            complete(html)
+          }
+        }
+      }
+  } ~
+    post {
+      path("riders" / "add.jsp") {
+        pathEndOrSingleSlash {
+          formFields('firstName, 'lastName, 'streetAddress.?) { (fn, ln, sa) =>
+            onComplete((ridersActor ? AddRider(fn, ln, None, sa)).mapTo[Rider]) {
+              case Success(newRider) =>
+                val html = Header + "<BODY>" + Menu + welcomeNewRider(newRider) + "</BODY>" + Footer
+                respondWithMediaType(`text/html`) {
+                  complete(html)
+                }
+              case Failure(f) =>
+                log.error("Error adding rider", f)
+                val html = Header + "<BODY>" + Menu + "<br /><span class=\"errorText\">" + f.getMessage + "</span><br />" + riderForm(Some(fn), Some(ln), None, None) + "</BODY>" + Footer
+                respondWithMediaType(`text/html`) {
+                  complete(html)
+                }
+            }
+          }
+        }
+      }
     }
+
+  //------ Add -------
+
+  def welcomeNewRider(rider: Rider) = {
+    val name = s"Welcome, ${rider.firstName} ${rider.lastName}"
+    val from = rider.streetAddress match {
+      case Some(address) if (address.nonEmpty) => s" from $address"
+      case _ => ""
+    }
+
+    "<br /><br />" + name + from + ".<BR><BR><BR><A href=\"../bikes/add.jsp?riderId=" + rider.id + "\">Click here to enter your bike(s)</A>"
+    //<% }
   }
+
+  def riderForm(firstName: Option[String], lastName: Option[String], emailAddress: Option[String], streetAddress: Option[String]) = {
+    val firstNameFieldValue = firstName match {
+      case Some(name) => name
+      case None => ""
+    }
+
+    val lastNameFieldValue = ""
+    val emailAddressFieldValue = ""
+    val streetAddressFieldValue = ""
+
+    // action="add.jsp"
+
+    "<P>Please enter your data below.</P><FORM name=\"addRiderForm\" method=\"POST\">" +
+      "<TABLE border=\"0\"><CAPTION><EM>Rider</EM></CAPTION>" +
+      "<TR><TD>" +
+      "First name *" +
+      "</TD><TD>" +
+      "<INPUT type=\"text\" size=\"20\" maxlength=\"20\" name=\"firstName\" value=\"" + firstNameFieldValue + "\">" +
+      "</TD></TR>" +
+      "<TR><TD>" +
+      "Last name *" +
+      "</TD><TD>" +
+      "<INPUT type=\"text\" size=\"40\" maxlength=\"40\" name=\"lastName\" value=\"" + lastNameFieldValue + "\">" +
+      "</TD></TR>" +
+      //      "<TR><TD>" +
+      //      "Email address" +
+      //      "</TD><TD>" +
+      //      "<INPUT type=\"text\" size=\"50\" maxlength=\"50\" name=\"emailAddress\" value=\"" + emailAddressFieldValue + "\">" +
+      //      "</TD></TR>" +
+      "<TR><TD>" +
+      "Location" +
+      "</TD><TD>" +
+      "<INPUT type=\"text\" size=\"50\" maxlength=\"50\" name=\"streetAddress\" value=\"" + streetAddressFieldValue + "\">" +
+      "</TD></TR>" +
+      "<TR>" +
+      "<TD colspan=\"2\" align=\"center\"><INPUT type=\"submit\" name=\"addRider\" value=\"Add\">" +
+      "</TR>" +
+      "</TABLE>" +
+      "</FORM>" +
+      "* = Required."
+  }
+
+  /*
+    <% if (newRider.getStreetAddress() != null) { %>
+    from <%= newRider.getStreetAddress() %>.<BR><BR>
+  <BR><A href="../bikes/add.jsp?riderId=<%=newRider.getId()%>>Click here to enter your bike(s)</A>
+<% }
+}
+  } else {
+%>
+<P>
+Please enter your data below.
+</P>
+<FORM name="addRiderForm" method="POST">
+<TABLE border="0">
+  <CAPTION><EM>Rider</EM></CAPTION>
+    <TR><TD>
+      First name *
+    </TD><TD>
+      <INPUT type="text" size="20" maxlength="20" name="firstName"
+             value="<% if (firstName != null) {%><%= firstName %><% } %>">
+      </TD></TR>
+      <TR><TD>
+        Last name *
+      </TD><TD>
+        <INPUT type="text" size="40" maxlength="40" name="lastName"
+               value="<% if (lastName != null) {%><%= lastName %><% } %>">
+        </TD></TR>
+        <TR><TD>
+          Email address
+        </TD><TD>
+          <INPUT type="text" size="50" maxlength="50" name="emailAddress"
+                 value="<% if (emailAddress != null) {%><%= emailAddress %><% } %>">
+          </TD></TR>
+          <TR><TD>
+            Location
+          </TD><TD>
+            <INPUT type="text" size="50" maxlength="50" name="streetAddress"
+                   value="<% if (streetAddress != null) {%><%= streetAddress %><% } %>">
+            </TD></TR>
+            <TR>
+              <TD colspan="2" align="center"><INPUT type="submit" name="addRider" value="Add">
+              </TR>
+              </TABLE>
+            </FORM>
+            * = Required.
+            <% } %>
+            </BODY>
+          </HTML>
+
+*/
+
+  //-------
 
   //  def makeRidersTable(riders: List[Riderr]): String = {
   //    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
@@ -55,11 +211,11 @@ trait RidersRoute extends HttpService
   val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeRidersTable(riders: Seq[Rider]): String = {
-    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th><th>Email address</th><th>Location</th>"
+    val tableHeader = "<th>Id</th><th>First name</th><th>Last name</th>" /*<th>Email address</th>*/ + "<th>Location</th>"
     val riderTableEntries = for (r <- riders) yield "<td>" + makeAddBikeLink(r) + "</td>" +
       "<td>" + r.firstName + "</td>" +
       "<td>" + makeUpdateRiderLink(r) + "</td>" +
-      "<td>" + r.emailAddress.getOrElse("") + "</td>" +
+      // "<td>" + r.emailAddress.getOrElse("") + "</td>" +
       "<td>" + r.streetAddress.getOrElse("") + "</td>"
     "<table border=\"1\" summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + tableHeader + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }

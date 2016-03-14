@@ -35,10 +35,11 @@ libraryDependencies ++= {
     "io.spray"                  %% "spray-caching"   % sprayVersion,
     "io.spray"                  %% "spray-can"       % sprayVersion,
     "io.spray"                  %% "spray-routing"   % sprayVersion,
-    "joda-time"                  % "joda-time"       % "2.9.2",
-    "ch.qos.logback"             % "logback-classic" % "1.1.4",
+    "joda-time"                 %  "joda-time"       % "2.9.2",
+    "com.iheart"                %% "ficus"           % "1.2.0",
+    "ch.qos.logback"            %  "logback-classic" % "1.1.4",
     "com.typesafe.slick"        %% "slick"           % "3.1.1",
-    "mysql"                      % "mysql-connector-java" % "5.1.31"
+    "mysql"                     %  "mysql-connector-java" % "5.1.31"
   )
 }
 
