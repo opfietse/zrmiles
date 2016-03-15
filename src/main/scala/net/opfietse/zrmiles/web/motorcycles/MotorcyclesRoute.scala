@@ -49,11 +49,6 @@ trait MotorcyclesRoute extends HttpService
     }
   }
 
-  //  def makeRidersTable(riders: List[Riderr]): String = {
-  //    val riderTableEntries = for (r <- riders) yield "<td>" + r.id + "</td>" + "<td>" + r.firstName + "</td>"
-  //    "<table border=\"1\"> summary=\"Lists the riders currently in the database\"><CAPTION><EM>Riders</EM></CAPTION>" + riderTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
-  //  }
-
   private val instructions = "<BR>Click on the <B>Id</B> to show/add the bikes for that rider.<BR>Click on the <B>last name</B> to CHANGE or DELETE that rider."
 
   def makeMotorcyclesTable(motorcycles: Seq[Motorcycle]): String = {
@@ -72,9 +67,9 @@ trait MotorcyclesRoute extends HttpService
   def makeMotorcyclesTableW(motorcycles: Seq[MotorcycleWithRider]): String = {
     val tableHeader = "<th>Id</th><th>Owner</th><th>Make</th><th>Model</th><th>Year</th><th>Odometer in</th><th>Current mileage</th>"
     val motorcycleTableEntries = for (m <- motorcycles) yield "<td>" + makeMilesLink(m) + "</td>" +
-      "<td>" + m.firstName + " " + m.lastName + "</td>" +
+      "<td>" + makeRiderLink(m) + "</td>" +
       "<td>" + m.make + "</td>" +
-      "<td>" + m.model + "</td>" +
+      "<td>" + makeMotorcycleLink(m) + "</td>" +
       "<td>" + m.year + "</td>" +
       "<td>" + m.distanceUnit + "</td>"
 
@@ -82,8 +77,8 @@ trait MotorcyclesRoute extends HttpService
       tableHeader + motorcycleTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
   }
 
-  def makeMilesLink(motorcycle: Motorcycle) = "<a href=\"miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
-  def makeMilesLink(motorcycle: MotorcycleWithRider) = "<a href=\"miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
-  //  def makeAddBikeLink(rider: Rider) = "<a href=\"bikes/add.jsp?riderId=" + rider.id + "\">" + rider.id + "</a>"
-  //  def makeUpdateRiderLink(rider: Rider) = "<a href=\"riders/update.jsp?riderId=" + rider.id + "\">" + rider.lastName + "</a>"
+  def makeMilesLink(motorcycle: Motorcycle) = "<a href=\"../miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
+  def makeMilesLink(motorcycle: MotorcycleWithRider) = "<a href=\"../miles/showandadd.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.id + "</a>"
+  def makeRiderLink(motorcycle: MotorcycleWithRider) = "<a href=\"../riders/update.jsp?riderId=" + motorcycle.riderId + "\">" + motorcycle.firstName + " " + motorcycle.lastName + "</a>"
+  def makeMotorcycleLink(motorcycle: MotorcycleWithRider) = "<a href=\"update.jsp?motorcycleId=" + motorcycle.id + "\">" + motorcycle.model + "</a>"
 }

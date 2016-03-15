@@ -13,7 +13,7 @@ import util.ActorRefFactorySupport
 
 object MotorcyclesActor {
   def props = Props[MotorcyclesActor]
-  def name = "riders-actor"
+  def name = "motorcycles-actor"
 
   sealed trait Command
   case object GetAllMotorcycles extends Command

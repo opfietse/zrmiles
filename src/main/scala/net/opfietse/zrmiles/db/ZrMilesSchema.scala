@@ -1,6 +1,6 @@
 package net.opfietse.zrmiles.db
 
-import net.opfietse.zrmiles.model.Rider
+import net.opfietse.zrmiles.model.{ Motorcycle, Rider }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -35,14 +35,14 @@ object ZrMilesSchema {
   val riders = TableQuery[Riders]
 
   // Definition of the ZR_MOTORCYCLE table
-  class Motorcycles(tag: Tag) extends Table[(Int, Int, String, String, Option[Int], Int)](tag, "ZR_MOTORCYCLES") {
+  class Motorcycles(tag: Tag) extends Table[Motorcycle](tag, "ZR_MOTORCYCLES") {
     def id = column[Int]("ID", O.PrimaryKey)
     def riderId = column[Int]("RIDER_ID")
     def make = column[String]("MAKE")
     def model = column[String]("MODEL")
-    def year = column[Option[Int]]("YEAR")
+    def year = column[Int]("YEAR")
     def distanceUnit = column[Int]("DISTANCE_UNIT")
-    def * = (id, riderId, make, model, year, distanceUnit)
+    def * = (id, riderId, make, model, year, distanceUnit) <> (Motorcycle.tupled, Motorcycle.unapply _)
     // A reified foreign key relation that can be navigated to create a join
     def rider = foreignKey("RIDER_FK", riderId, riders)(_.id)
   }
