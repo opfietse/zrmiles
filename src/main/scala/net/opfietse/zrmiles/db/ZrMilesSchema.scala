@@ -40,7 +40,7 @@ object ZrMilesSchema {
     def riderId = column[Int]("RIDER_ID")
     def make = column[String]("MAKE")
     def model = column[String]("MODEL")
-    def year = column[Int]("YEAR")
+    def year = column[Option[Int]]("YEAR")
     def distanceUnit = column[Int]("DISTANCE_UNIT")
     def * = (id, riderId, make, model, year, distanceUnit) <> (Motorcycle.tupled, Motorcycle.unapply _)
     // A reified foreign key relation that can be navigated to create a join

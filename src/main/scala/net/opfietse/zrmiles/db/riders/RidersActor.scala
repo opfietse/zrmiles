@@ -1,25 +1,21 @@
 package net.opfietse.zrmiles.db.riders
 
-import net.opfietse.zrmiles.Settings
-
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.util._
 import scala.collection.JavaConversions._
 
 import akka.actor._
-import net.opfietse.zrmiles.db.Db
-import net.opfietse.zrmiles.db.riders.RidersActor._
-import net.opfietse.zrmiles.util.ActorRefFactorySupport
-import nl.wobble.zrmiles.dao.{ EnvDbInfo, DaoFactory }
 import org.joda.time.DateTime
 
 import slick.driver.MySQLDriver.api._
 
+import net.opfietse.zrmiles.db.Db
+import net.opfietse.zrmiles.db.riders.RidersActor._
+import net.opfietse.zrmiles.util.ActorRefFactorySupport
 import net.opfietse.zrmiles.db.ZrMilesSchema._
-import net.opfietse.zrmiles.db.ZrMilesSchema.Riders
-import net.opfietse.zrmiles.model.{ Riderr, Rider }
-
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.util.{ Success, Failure }
+import net.opfietse.zrmiles.model._
+import nl.wobble.zrmiles.dao._
 
 object RidersActor {
   def props = Props[RidersActor]
@@ -31,7 +27,8 @@ object RidersActor {
   case object GetAllRidersSlick extends Command
   case object GetFirstNames extends Command
   case object GetTime extends Command
-  case class AddRider(firstNAme: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String])
+  case class AddRider(firstName: String, lastName: String, emailAddress: Option[String], streetAddress: Option[String]) extends Command
+  case class GetRider(id: Int) extends Command
 }
 
 class RidersActor extends Actor with ActorLogging {
@@ -51,6 +48,9 @@ class RidersActor extends Actor with ActorLogging {
     case GetFirstNames =>
       val names = getAllAsRider
       sender ! names
+    case GetRider(id) =>
+      val rider = getRider(id)
+      sender ! rider
 
     case AddRider(firstName, lastName, emailAddress, streetAddress) =>
       try {
@@ -72,6 +72,12 @@ class RidersActor extends Actor with ActorLogging {
 
     val riders: List[Rider] = javaRiders.toList.map(rider => toScalaRider(rider))
     riders
+  }
+
+  def getRider(id: Int): Rider = {
+    log.info("Get rider with id {}", id)
+    val rider: nl.wobble.zrmiles.common.Rider = DaoFactory.getInstance().getRidersDao(new EnvDbInfo).findById(id)
+    toScalaRider(rider)
   }
 
   def toScalaRider(rider: nl.wobble.zrmiles.common.Rider): Rider = {
