@@ -3,12 +3,13 @@ package zrmiles
 package web
 package home
 
-import net.opfietse.zrmiles.util.ExecutionContextSupport
-import net.opfietse.zrmiles.web.motorcycles.MotorcyclesRoute
-import net.opfietse.zrmiles.web.riders.RidersRoute
 import spray.routing._
 import spray.http.MediaTypes._
+import spray.http.StatusCodes
 
+import util.ExecutionContextSupport
+import motorcycles.MotorcyclesRoute
+import riders.RidersRoute
 import common.CommonHtml._
 
 trait ZrmilesRoute extends HttpService
@@ -24,10 +25,11 @@ trait ZrmilesRoute extends HttpService
 trait HomeIndexRoute extends HttpService {
   val homeIndexRoute =
     path("home" / "index.jsp") {
-
       val html = Header + "<BODY>" + Menu + Welcome + "</BODY>" + Footer
       respondWithMediaType(`text/html`) {
         complete(html)
       }
+    } ~ pathEndOrSingleSlash {
+      redirect("home/index.jsp", StatusCodes.TemporaryRedirect)
     }
 }
