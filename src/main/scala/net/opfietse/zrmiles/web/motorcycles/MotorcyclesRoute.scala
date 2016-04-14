@@ -56,7 +56,7 @@ trait MotorcyclesRoute extends HttpService
           onComplete((motorcyclesActor ? GetAddBikeStuff(riderId.toInt)).mapTo[Future[(Rider, List[Motorcycle])]].flatMap(tup => tup)) {
             case Success((rider, bikes)) =>
               val html = Header + "<BODY>" + Menu + "<BR /><BR />" + makeAddBikeText(rider) + "<BR /><BR />" +
-                bikeForm(None, None, None, 0) + "<BR />" + makeMotorcyclesTableForRider(bikes, rider.firstName) + instructions + "</BODY>" + Footer
+                bikeForm(None, None, None, "0") + "<BR />" + makeMotorcyclesTableForRider(bikes, rider.firstName) + instructions + "</BODY>" + Footer
               respondWithMediaType(`text/html`) {
                 complete(html)
               }
@@ -68,45 +68,39 @@ trait MotorcyclesRoute extends HttpService
               }
           }
         }
-      } ~
-      post {
-        path("bikes" / "add.jsp") {
-          parameters('riderId) { riderId =>
-            pathEndOrSingleSlash {
-              formFields('make, 'model, 'year.?.as[Option[Int]], 'distanceUnit.as[Int]) { (make, model, year, distanceUnit) =>
-                onComplete((motorcyclesActor ? AddBike(riderId.toInt, make, model, year, distanceUnit)).mapTo[Motorcycle]) {
-                  case Success(newBike) =>
-                    onComplete((motorcyclesActor ? GetAddBikeStuff(riderId.toInt)).mapTo[Future[(Rider, List[Motorcycle])]].flatMap(tup => tup)) {
-                      case Success((rider, bikes)) =>
-                        val html = Header + "<BODY>" + Menu + "<BR/><BR/>" + makeAddBikeText(rider) + "<BR/><BR />" +
-                          bikeForm(None, None, None, 0) + instructions + "</BODY>" + Footer
-                        respondWithMediaType(`text/html`) {
-                          complete(html)
-                        }
-
-                      case Failure(t) =>
-                        log.error("Error retreiving riders", t)
-                        respondWithMediaType(`text/html`) {
-                          complete("Oops .....")
-                        }
-                    }
-                  //                    val html = Header + "<BODY>" + Menu + welcomeNewRider(newRider) + "</BODY>" + Footer
-                  //                    respondWithMediaType(`text/html`) {
-                  //                      complete(html)
-                  //                    }
-                  case Failure(f) =>
-                    log.error("Error adding bike", f)
-                    val html = Header + "<BODY>" + Menu + "<br /><span class=\"errorText\">" + f.getMessage + "</span><br />" + bikeForm(Some(make), Some(model), year, distanceUnit) + "</BODY>" + Footer
+      }
+  } ~
+    post {
+      path("bikes" / "add.jsp") {
+        parameters('riderId) { riderId =>
+          formFields('make, 'model, 'year.?, 'distanceUnit, 'addMotorcycle) { (make, model, year, distanceUnit, addMotorcycle) =>
+            onComplete((motorcyclesActor ? AddBike(riderId.toInt, make, model, year, distanceUnit)).mapTo[Motorcycle]) {
+              case Success(newBike) =>
+                onComplete((motorcyclesActor ? GetAddBikeStuff(riderId.toInt)).mapTo[Future[(Rider, List[Motorcycle])]].flatMap(tup => tup)) {
+                  case Success((rider, bikes)) =>
+                    val html = Header + "<BODY>" + Menu + "<BR/><BR/>" + makeAddBikeText(rider) + "<BR/><BR />" +
+                      bikeForm(None, None, None, "0") + instructions + "</BODY>" + Footer
                     respondWithMediaType(`text/html`) {
                       complete(html)
                     }
+
+                  case Failure(t) =>
+                    log.error("Error retreiving riders", t)
+                    respondWithMediaType(`text/html`) {
+                      complete("Oops .....")
+                    }
                 }
-              }
+              case Failure(f) =>
+                log.error("Error adding bike", f)
+                val html = Header + "<BODY>" + Menu + "<br /><span class=\"errorText\">" + f.getMessage + "</span><br />" + bikeForm(Some(make), Some(model), year, distanceUnit) + "</BODY>" + Footer
+                respondWithMediaType(`text/html`) {
+                  complete(html)
+                }
             }
           }
         }
       }
-  }
+    }
 
   private val instructions = "Click on the <B>Id</B> to show/add the mileage for that bike.<BR>\nClick on the <B>Model</B> field to CHANGE or DELETE the entry\nClick on the <B>Owner</B> field to CHANGE or DELETE that rider"
 
@@ -116,8 +110,8 @@ trait MotorcyclesRoute extends HttpService
       "<td>" + m.riderId + "</td>" +
       "<td>" + m.make + "</td>" +
       "<td>" + m.model + "</td>" +
-      "<td>" + m.year + "</td>" +
-      "<td>" + m.distanceUnit + "</td>"
+      "<td>" + m.year.getOrElse(0) + "</td>" +
+      "<td>" + makeDistanceText(m.distanceUnit) + "</td>"
 
     "<table border=\"1\" summary=\"Lists the bikes currently in the database\"><CAPTION><EM>Bikes</EM></CAPTION>" +
       tableHeader + motorcycleTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
@@ -129,8 +123,8 @@ trait MotorcyclesRoute extends HttpService
       "<td>" + makeRiderLink(m) + "</td>" +
       "<td>" + m.make + "</td>" +
       "<td>" + makeMotorcycleLink(m) + "</td>" +
-      "<td>" + m.year + "</td>" +
-      "<td>" + m.distanceUnit + "</td>"
+      "<td>" + m.year.getOrElse(0) + "</td>" +
+      "<td>" + makeDistanceText(m.distanceUnit) + "</td>"
 
     "<table border=\"1\" summary=\"Lists the bikes currently in the database\"><CAPTION><EM>Bikes</EM></CAPTION>" +
       tableHeader + motorcycleTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
@@ -142,8 +136,8 @@ trait MotorcyclesRoute extends HttpService
       "<td>" + rider + "</td>" +
       "<td>" + m.make + "</td>" +
       "<td>" + makeMotorcycleLink(m) + "</td>" +
-      "<td>" + m.year + "</td>" +
-      "<td>" + m.distanceUnit + "</td>"
+      "<td>" + m.year.getOrElse(0) + "</td>" +
+      "<td>" + makeDistanceText(m.distanceUnit) + "</td>"
 
     "<table border=\"1\" summary=\"Lists the bikes currently in the database\"><CAPTION><EM>Bikes</EM></CAPTION>" +
       tableHeader + motorcycleTableEntries.mkString("<tr>", "</tr><tr>", "</tr>") + "</table>"
@@ -160,7 +154,7 @@ trait MotorcyclesRoute extends HttpService
     "Enter data for " + rider.firstName + " " + rider.lastName + quote + " bike below."
   }
 
-  def bikeForm(make: Option[String], model: Option[String], year: Option[Int], distanceUnit: Int): String = {
+  def bikeForm(make: Option[String], model: Option[String], year: Option[String], distanceUnit: String): String = {
     val makeFieldValue = make match {
       case Some(make) => make
       case None => ""
@@ -216,5 +210,7 @@ trait MotorcyclesRoute extends HttpService
     "<OPTION " + selectedAsString + " value=\"" + value + "\">" + caption + "</OPTION>"
   }
 
-  def distanceInMiles(distanceUnit: Int): Boolean = distanceUnit == 0
+  def distanceInMiles(distanceUnit: String): Boolean = distanceUnit == "0"
+
+  def makeDistanceText(distanceUnit: Int): String = if (distanceUnit == "0") "Miles" else "Kilometers"
 }

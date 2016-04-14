@@ -28,7 +28,9 @@ object MotorcyclesActor {
   case object GetAllMotorcyclesWithRiders extends Command
   case class GetMotorcyclesForRiderId(riderId: Int) extends Command
   case class GetAddBikeStuff(riderId: Int) extends Command
-  case class AddBike(riderId: Int, make: String, model: String, year: Option[Int], distanceUnit: Int)
+  case class AddBike(riderId: Int, make: String, model: String, year: Option[String], distanceUnit: String) extends Command {
+
+  }
 }
 class MotorcyclesActor extends Actor with ActorLogging
     with ActorAskPattern
@@ -55,6 +57,14 @@ class MotorcyclesActor extends Actor with ActorLogging
       val stuff = getStuff(id)
       println("Stuff" + stuff)
       sender ! stuff
+
+    case AddBike(riderId, make, model, year, distanceUnit) =>
+      try {
+        val newBike = addMotorcycle(riderId, make, model, year, distanceUnit)
+        sender ! newBike
+      } catch {
+        case e: Exception => sender ! Status.Failure(e)
+      }
   }
 
   def getAllMotorcycles: Future[Seq[Motorcycle]] = {
@@ -109,17 +119,22 @@ class MotorcyclesActor extends Actor with ActorLogging
     riderId: Int,
     make: String,
     model: String,
-    year: Option[Int],
-    distanceUnit: Int
+    year: Option[String],
+    distanceUnit: String
   ): Motorcycle = {
 
     require(!make.isEmpty, "Make cannot be empty")
     require(!model.isEmpty, "Model name cannot be empty")
-    //require(!distanceUnit.isEmpty, "Distance unit cannot be empty")
+    require(!distanceUnit.isEmpty, "Distance unit cannot be empty")
 
     val bikesDao = DaoFactory.getInstance().getMotorcyclesDao(new EnvDbInfo)
+    val yearString: String = year match {
+      case None => "0"
+      case Some("") => "0"
+      case Some(s) => s
+    }
     val newKey = bikesDao.
-      add(toJavaBike(Motorcycle(0, riderId, make, model, year, distanceUnit)))
+      add(toJavaBike(Motorcycle(0, riderId, make, model, Some(yearString.toInt), distanceUnit.toInt)))
 
     toScalaBike(bikesDao.findById(newKey))
   }
