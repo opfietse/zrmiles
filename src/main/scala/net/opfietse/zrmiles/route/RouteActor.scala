@@ -22,6 +22,7 @@ class RouteActor extends HttpServiceActor with ZrmilesRoute with SlickRidersActo
   implicit def executionContext = context.dispatcher
 
   implicit val timeout = 10 seconds
+  implicit val settings = Settings(context)
 
   def receive = runRoute(
     logRequestResponse(showRequestResponses _)(routes)

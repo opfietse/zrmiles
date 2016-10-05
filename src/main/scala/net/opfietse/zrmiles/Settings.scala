@@ -15,6 +15,11 @@ class SettingsImpl(rootConfig: Config) extends Extension {
     val AskTimeout = config.as[FiniteDuration]("ask-timeout")
     println(s"Timeout: $AskTimeout")
   }
+
+  object User {
+    val Username = config.as[String]("username")
+    val Password = config.as[String]("password")
+  }
 }
 
 object Settings extends ExtensionId[SettingsImpl] with ExtensionIdProvider {
@@ -24,4 +29,8 @@ object Settings extends ExtensionId[SettingsImpl] with ExtensionIdProvider {
     new SettingsImpl(system.settings.config)
 
   def apply(context: ActorContext): SettingsImpl = apply(context.system)
+}
+
+trait SettingsProvider {
+  implicit def settings: SettingsImpl
 }
